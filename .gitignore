@@ -1,0 +1,38 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# ===== Virtual environments =====
+.venv/
+venv/
+env/
+ENV/
+
+# ===== Pytest =====
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ===== IDEs =====
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== Relatorios gerados em runtime =====
+# (queremos manter a pasta saida/ mas nao os relatorios gerados pelo sistema)
+saida/*.json
+saida/*.txt
+!saida/.gitkeep
+!saida/relatorio_exemplo.json
+
+# ===== Logs de execucao (nao confundir com logs/ que sao dados de teste) =====
+*.log.bak
