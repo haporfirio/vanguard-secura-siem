@@ -116,3 +116,5 @@ def exibir_enriquecimento(dados_ip):
         - Use f-strings com alinhamento: f"{'IP:':<15} {dados['ip']}"
     """
     pass
+
+print("Pequeno teste!")
