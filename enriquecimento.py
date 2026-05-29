@@ -45,29 +45,26 @@ def eh_ip_privado(ip_str):
         - Verifique cada faixa com condicionais
         - Lembre de verificar 172.16-31 (segundo octeto entre 16 e 31)
     """
-    # partes = ip.split(".")
-    #eh_valido = len(partes) == 4 and all(0 <= int(p) <= 255 for p in partes)
-    #eh_privado = ip.startswith("192.168.") or ip.startswith("10.") or ip.startswith("172.16")
-    # if ip.startswith("192.168."):
-    #     eh_privado = True
-    # elif ip.startswith("10."):
-    #     eh_privado = True
-    # elif ip.startswith("172."):
-    # eh_privado = True
-    
-    eh_valido = False
-    eh_ip_privado = False
+    eh_valido = True
+    eh_privado = False
 
     try:
         ip = ipaddress.ip_address(ip_str)
-    except ValueError as e:
+    except ValueError:
+        print("{} é inválido.".format(ip_str))
         eh_valido = False
     finally:
         if eh_valido:
-            if ip.version == 4 and 16 <= ip.packed[1] <= 31:
-                eh_ip_privado = True
+            if ip.packed[0] == 10:
+                eh_privado = True 
+            elif (ip.packed[0] == 172 and 16 <= ip.packed[1] <= 31):
+                eh_privado = True
+            elif (ip.packed[0] == 192 and ip.packed[1] == 168):
+                eh_privado = True
+            elif (ip.packed[0] == 127):
+                eh_privado = True
 
-    return eh_valido, eh_ip_privado
+    return eh_valido, eh_privado
 
 def consultar_ip(ip, cache):
     """
@@ -147,7 +144,7 @@ def areaDev():
     while contador <= 5:
 
         if contador == 0:
-            ip = "172.16.0.256"
+            ip = "172.16.0.255"
         elif contador == 1:
             ip = "10.10.2.4"
         elif contador == 2:
