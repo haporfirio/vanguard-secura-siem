@@ -23,7 +23,19 @@
 import json
 import ipaddress
 
-def eh_ip_privado(ip_str):
+def _eh_ip_privado(ip: ipaddress.IPv4Address | ipaddress.IPv6Address):
+    primeiro_unpacked_ip = ip.packed[0]
+    segundo_unpacked_ip = ip.packed[1]
+    return (primeiro_unpacked_ip == 10) or \
+           (primeiro_unpacked_ip == 172 and 16 <= segundo_unpacked_ip <= 31) or \
+           (primeiro_unpacked_ip == 192 and segundo_unpacked_ip == 168) or \
+           (primeiro_unpacked_ip == 127)
+
+class IPInvalidoError(Exception):
+    def __init__(self, ip_str):
+        super().__init__(f"{ip_str} é inválido.")
+
+def eh_ip_valido(ip_str):
     """
     Verifica se um endereco IP pertence a uma faixa de rede privada (RFC 1918).
 
@@ -45,26 +57,10 @@ def eh_ip_privado(ip_str):
         - Verifique cada faixa com condicionais
         - Lembre de verificar 172.16-31 (segundo octeto entre 16 e 31)
     """
-    eh_valido = True
-    eh_privado = False
-
     try:
-        ip = ipaddress.ip_address(ip_str)
+        return ipaddress.ip_address(ip_str)
     except ValueError:
-        print("{} é inválido.".format(ip_str))
-        eh_valido = False
-    finally:
-        if eh_valido:
-            if ip.packed[0] == 10:
-                eh_privado = True 
-            elif (ip.packed[0] == 172 and 16 <= ip.packed[1] <= 31):
-                eh_privado = True
-            elif (ip.packed[0] == 192 and ip.packed[1] == 168):
-                eh_privado = True
-            elif (ip.packed[0] == 127):
-                eh_privado = True
-
-    return eh_valido, eh_privado
+        raise IPInvalidoError(f"O Ip {ip_str}")
 
 def consultar_ip(ip, cache):
     """
@@ -141,25 +137,33 @@ def exibir_enriquecimento(dados_ip):
 
 def areaDev():
     contador = 0
-    while contador <= 5:
-
-        if contador == 0:
-            ip = "172.16.0.255"
-        elif contador == 1:
-            ip = "10.10.2.4"
-        elif contador == 2:
-            ip = "192.168.34.44"
-        elif contador == 3:
-            ip = "172.16.56.7"
-        elif contador == 4:
-            ip = "8.8.8.8"
-        elif contador == 5:
-            ip = "255.255.255.255"
+    while contador <= 7:
+        ip_dict = {
+            0: "172.16.0.255",
+            1: "10.10.2.4",
+            2: "192.168.34.44",
+            3: "172.16.56.7",
+            4: "8.8.8.8",
+            5: "255.255.255.255",
+            6: "192.168.255.256",
+            7: "172.16.255.34"
+        }
         
-        valido, privado = eh_ip_privado(ip)
-        print(ip)
-        print("valido ->", valido)
-        print("privado ->", privado)
-        contador += 1
+        ip = ip_dict[contador]
+        
+        try:
+            ip = eh_ip_valido(ip)
+            print(f"O Ip {ip} é válido.")
+
+            if _eh_ip_privado(ip):
+                print(f"O Ip {ip} é privado.")
+            else:
+                print(f"O Ip {ip} é público.")
+
+        except IPInvalidoError as e:
+            print(e)
+        finally:
+            contador += 1
+            continue
 
 areaDev()
