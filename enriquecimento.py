@@ -1,28 +1,29 @@
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+""" Modulo 5 - Enriquecimento de IPs
+        Adiciona contexto geografico e organizacional aos IPs suspeitos
+        consultando a API publica do ipinfo.io.
+
+        Classifica IPs em privados (rede interna) e publicos, e consulta
+        apenas os publicos para economizar requisicoes.
+
+        Formato do resultado de enriquecimento:
+        {
+            "ip": "185.220.101.1",
+            "privado": False,
+            "cidade": "Frankfurt am Main",
+            "regiao": "Hesse",
+            "pais": "DE",
+            "org": "AS208294 Fastethernet",
+            "hostname": "tor-exit.r2"
+        }
 """
-Modulo 5 - Enriquecimento de IPs
-Adiciona contexto geografico e organizacional aos IPs suspeitos
-consultando a API publica do ipinfo.io.
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-Classifica IPs em privados (rede interna) e publicos, e consulta
-apenas os publicos para economizar requisicoes.
-
-Formato do resultado de enriquecimento:
-{
-    "ip": "185.220.101.1",
-    "privado": False,
-    "cidade": "Frankfurt am Main",
-    "regiao": "Hesse",
-    "pais": "DE",
-    "org": "AS208294 Fastethernet",
-    "hostname": "tor-exit.r2"
-}
-"""
-
-import requests
+#import requests
 import json
+import ipaddress
 
-
-def eh_ip_privado(ip):
+def eh_ip_privado(ip_str):
     """
     Verifica se um endereco IP pertence a uma faixa de rede privada (RFC 1918).
 
@@ -44,8 +45,29 @@ def eh_ip_privado(ip):
         - Verifique cada faixa com condicionais
         - Lembre de verificar 172.16-31 (segundo octeto entre 16 e 31)
     """
-    pass
+    # partes = ip.split(".")
+    #eh_valido = len(partes) == 4 and all(0 <= int(p) <= 255 for p in partes)
+    #eh_privado = ip.startswith("192.168.") or ip.startswith("10.") or ip.startswith("172.16")
+    # if ip.startswith("192.168."):
+    #     eh_privado = True
+    # elif ip.startswith("10."):
+    #     eh_privado = True
+    # elif ip.startswith("172."):
+    # eh_privado = True
+    
+    eh_valido = False
+    eh_ip_privado = False
 
+    try:
+        ip = ipaddress.ip_address(ip_str)
+    except ValueError as e:
+        eh_valido = False
+    finally:
+        if eh_valido:
+            if ip.version == 4 and 16 <= ip.packed[1] <= 31:
+                eh_ip_privado = True
+
+    return eh_valido, eh_ip_privado
 
 def consultar_ip(ip, cache):
     """
@@ -117,4 +139,30 @@ def exibir_enriquecimento(dados_ip):
     """
     pass
 
-print("Pequeno teste!")
+#+++++++++++++++++++++++++++++++++++++++++
+
+
+def areaDev():
+    contador = 0
+    while contador <= 5:
+
+        if contador == 0:
+            ip = "172.16.0.256"
+        elif contador == 1:
+            ip = "10.10.2.4"
+        elif contador == 2:
+            ip = "192.168.34.44"
+        elif contador == 3:
+            ip = "172.16.56.7"
+        elif contador == 4:
+            ip = "8.8.8.8"
+        elif contador == 5:
+            ip = "255.255.255.255"
+        
+        valido, privado = eh_ip_privado(ip)
+        print(ip)
+        print("valido ->", valido)
+        print("privado ->", privado)
+        contador += 1
+
+areaDev()
