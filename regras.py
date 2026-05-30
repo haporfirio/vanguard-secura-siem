@@ -25,8 +25,9 @@ Niveis de severidade (baseados na pontuacao):
 import json
 
 
-def carregar_regras(caminho_config):
-    """
+# def carregar_regras(caminho_config):
+"""
+
     Le o arquivo regras.json e retorna a lista de regras.
 
     Parametros:
@@ -47,11 +48,25 @@ def carregar_regras(caminho_config):
         - Use list comprehension para filtrar regras ativas:
           [r for r in regras if r.get("ativa", False)]
     """
-    pass
+
+def carregar_regras(caminho_config):
+      try:
+          with open(caminho_config, "r") as f:
+              dados = json.load(f)
+      except FileNotFoundError:
+          print(f"[ERRO] Arquivo de regras não encontrado: {caminho_config}")
+          return []
+      except json.JSONDecodeError:
+          print(f"[ERRO] JSON inválido em: {caminho_config}")
+          return []
+
+      regras = dados.get("regras", [])
+      regras_ativas = [r for r in regras if r.get("ativa", False)]
+      return regras_ativas
 
 
-def classificar_severidade(pontuacao):
-    """
+# def classificar_severidade(pontuacao):
+"""
     Converte uma pontuacao numerica em nivel de severidade.
 
     Parametros:
@@ -71,60 +86,89 @@ def classificar_severidade(pontuacao):
         - Use if/elif/else encadeado
         - Comece pelo maior valor e va descendo
     """
-    pass
+
+def classificar_severidade(pontuacao):
+      if pontuacao >= 9:
+          return "CRITICA"
+      elif pontuacao >= 7:
+          return "ALTA"
+      elif pontuacao >= 5:
+          return "MEDIA"
+      elif pontuacao >= 3:
+          return "BAIXA"
+      else:
+          return "INFO"
+
+def extrair_valor(detalhes, chave):
+      """
+      Pega o valor de 'chave=valor' dentro da string detalhes.
+      Ex: extrair_valor("proto=TCP dport=22", "dport") -> "22"
+      Retorna None se a chave nao existir.
+      """
+      for parte in detalhes.split():
+          if parte.startswith(f"{chave}="):
+              return parte.split("=", 1)[1]
+      return None
 
 
 def avaliar_regra(regra, evento):
-    """
-    Avalia se um evento viola uma regra especifica.
+      """
+      Avalia se um evento viola uma regra. Retorna dict de alerta ou None.
+      """
+      if evento.get("fonte") != regra.get("fonte"):
+          return None
 
-    Parametros:
-        regra (dict): dicionario da regra (do JSON de configuracao)
-        evento (dict): dicionario do evento normalizado (do coletor)
+      condicao = regra.get("condicao")
+      detalhes = evento.get("detalhes", "")
+      disparou = False
 
-    Retorna:
-        dict: alerta gerado se a regra foi violada
-        None: se o evento nao viola a regra
+      if condicao == "usuario_privilegiado":
+          usuario = extrair_valor(detalhes, "usuario")
+          if usuario and usuario in regra.get("usuarios_alvo", []):
+              disparou = True
 
-    Comportamento esperado:
-        - Primeiro verifica se a fonte do evento bate com a fonte da regra
-        - Depois avalia a condicao especifica:
-            "usuario_privilegiado": verifica se o usuario esta na lista de alvo
-            "porta_critica": verifica se a porta bloqueada esta na lista critica
-            "path_traversal": verifica se a URL contem padroes de traversal
-            "xss": verifica se a URL contem padroes de XSS
-            "reconhecimento": verifica se a URL esta na lista de suspeitas
+      elif condicao == "porta_critica":
+          if evento.get("tipo") == "BLOCK":
+              porta_str = extrair_valor(detalhes, "dport")
+              try:
+                  porta = int(porta_str) if porta_str else None
+                  if porta in regra.get("portas_criticas", []):
+                      disparou = True
+              except ValueError:
+                  pass
 
-    Dicas:
-        - Use regra["condicao"] para decidir qual verificacao fazer
-        - Para "usuario_privilegiado": extraia o usuario do campo "detalhes"
-          (ex: "usuario=admin" -> "admin") e veja se esta em regra["usuarios_alvo"]
-        - Para "porta_critica": extraia dport do "detalhes" e veja se esta em regra["portas_criticas"]
-        - Para padroes na URL: use any(padrao in url for padrao in regra["padroes"])
-        - O alerta retornado deve ter: timestamp, regra_id, regra_nome, severidade, ip, descricao
-    """
-    pass
+      elif condicao in ("path_traversal", "xss"):
+          url = extrair_valor(detalhes, "url") or ""
+          if any(p in url for p in regra.get("padroes", [])):
+              disparou = True
+
+      elif condicao == "reconhecimento":
+          url = extrair_valor(detalhes, "url") or ""
+          if any(u in url for u in regra.get("urls_suspeitas", [])):
+              disparou = True
+
+      if not disparou:
+          return None
+
+      return {
+          "timestamp": evento.get("timestamp"),
+          "regra_id": regra.get("id"),
+          "regra_nome": regra.get("nome"),
+          "severidade": classificar_severidade(regra.get("severidade_base", 0)),
+          "ip": evento.get("ip"),
+          "descricao": regra.get("descricao", ""),
+      }
 
 
 def aplicar_regras(eventos, regras):
-    """
-    Aplica todas as regras a todos os eventos e retorna os alertas gerados.
-
-    Parametros:
-        eventos (list[dict]): lista de eventos normalizados
-        regras (list[dict]): lista de regras ativas
-
-    Retorna:
-        list[dict]: lista de alertas gerados
-
-    Comportamento esperado:
-        - Para cada evento, testa todas as regras
-        - Se avaliar_regra retorna um alerta (nao None), adiciona a lista
-        - Um mesmo evento pode gerar multiplos alertas (violar varias regras)
-
-    Dicas:
-        - Use dois loops for aninhados: para cada evento, para cada regra
-        - resultado = avaliar_regra(regra, evento)
-        - if resultado is not None: alertas.append(resultado)
-    """
-    pass
+      """
+      Para cada evento, testa todas as regras. Retorna lista de alertas gerados.
+      Um mesmo evento pode gerar varios alertas (violar varias regras).
+      """
+      alertas = []
+      for evento in eventos:
+          for regra in regras:
+              resultado = avaliar_regra(regra, evento)
+              if resultado is not None:
+                  alertas.append(resultado)
+      return alertas
