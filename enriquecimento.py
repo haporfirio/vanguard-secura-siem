@@ -22,6 +22,7 @@
 import requests
 import json
 import ipaddress
+from pathlib import Path
 
 def _eh_ip_privado(ip: ipaddress.IPv4Address | ipaddress.IPv6Address):
     primeiro_unpacked_ip = ip.packed[0]
@@ -89,20 +90,22 @@ def consultar_ip(ip, cache):
         - cache[ip] = resultado  (salva no cache)
     """
     novos_dados = {}
-
+#if ip in chache["ip"]:
+    #Pula consulta API
+#else:
     try:
-        resposta = requests.get(f"https://ipinfo.io/{ip}/json", timeout=2)
+        resposta = requests.get(f"https://ipinfo.io/{ip}/json", timeout=5)
     except ConnectionError as e:
         print(f"ERRO: {e}")
     except TimeoutError as e:
         print(f"ERRO: {e}")
     except requests.exceptions.JSONDecodeError as e:
         print(f"ERRO: {e}")
-    if resposta.status_code == 201:
+    if resposta.status_code == 200:
         print(f"{ip} encontrado na API")
         dados = resposta.json()
 
-        novo_ip = dados['ip']
+        novo_ip = dados["ip"]
         nova_cidade = dados["city"]
         nova_regiao = dados["region"]
         novo_pais = dados["country"]
@@ -173,18 +176,32 @@ ip_dict = {
     5: "255.255.255.255",
     6: "192.168.255.256",
     7: "172.16.255.34",
-    8: "8.8.8.8",
-    9: "lerolerolero"
+    8: "lerolerolero"
 }
 
-cache = [
-    {'ip': '8.8.8.8',
-     'cidade': 'Mountain View',
-     'regiao': 'California',
-     'pais': 'US',
-     'org': 'AS15169 Google LLC',
-     'hostname': 'dns.google'}
-]
+# {
+#     "cache": [
+#         {
+#             "ip": "192.168.34.44",
+#             "cidade": "Cidade_Interna",
+#             "regiao": "Regiao_Interna",
+#             "pais": "Pais_Interno",
+#             "org": "Org_Interno",
+#             "hostname": "hostname_Interno"
+#         }
+#     ]
+# }
+
+caminho_config = "D:\\01-Cursos\\03-FIAP\\01-Graduacao\\01-Ciber_seguranca\\01-Primeiro_ano\\01-Primeiro_semestre\\01-Coding_for_Security\\GS_Semestre_1\\vanguard-secura-siem\\config\\cache.json"
+
+def _carregar_cache(caminho_config):
+    with open(caminho_config, "r") as f:
+        cache_json = json.load(f)
+
+    cache = cache_json.get("cache", [])
+    return cache
+
+cache = _carregar_cache(caminho_config)
 
 def areaDev():
     contador = 0
@@ -197,7 +214,6 @@ def areaDev():
 
             if _eh_ip_privado(ip):
                 print(f"O Ip {ip} é privado.")
-                pass
             else:
                 print(f"O Ip {ip} é público.")
                 cache.append(consultar_ip(ip, cache))
@@ -208,5 +224,7 @@ def areaDev():
         finally:
             contador += 1
             continue
+    with open(caminho_config, "a") as f:
+        json.dump(cache, f, ensure_ascii=False)
 
 areaDev()
