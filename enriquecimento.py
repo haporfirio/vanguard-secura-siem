@@ -88,14 +88,37 @@ def consultar_ip(ip, cache):
         - Use dados.get("city", "Desconhecido") para valores opcionais
         - cache[ip] = resultado  (salva no cache)
     """
-    resposta = requests.get(f"https://ipinfo.io/{ip}/json", timeout=2)
-    if resposta.status_code == 200:
+    novos_dados = {}
+
+    try:
+        resposta = requests.get(f"https://ipinfo.io/{ip}/json", timeout=2)
+    except ConnectionError as e:
+        print(f"ERRO: {e}")
+    except TimeoutError as e:
+        print(f"ERRO: {e}")
+    except requests.exceptions.JSONDecodeError as e:
+        print(f"ERRO: {e}")
+    if resposta.status_code == 201:
         print(f"{ip} encontrado na API")
         dados = resposta.json()
-        print(dados)
 
-        
-    return resposta
+        novo_ip = dados['ip']
+        nova_cidade = dados["city"]
+        nova_regiao = dados["region"]
+        novo_pais = dados["country"]
+        nova_org = dados["org"]
+        novo_hostname = dados["hostname"]
+
+        novos_dados["ip"] = novo_ip
+        novos_dados["cidade"] = nova_cidade
+        novos_dados["regiao"] = nova_regiao
+        novos_dados["pais"] = novo_pais
+        novos_dados["org"] = nova_org
+        novos_dados["hostname"] = novo_hostname
+    else:
+        print(f"Resposta {resposta.status_code}")
+
+    return novos_dados
 
 
 def enriquecer_alertas(alertas, cache):
@@ -121,7 +144,6 @@ def enriquecer_alertas(alertas, cache):
         - Consulte cada IP unico uma vez, depois distribua pelos alertas
     """
     pass
-
 
 def exibir_enriquecimento(dados_ip):
     """
@@ -151,9 +173,18 @@ ip_dict = {
     5: "255.255.255.255",
     6: "192.168.255.256",
     7: "172.16.255.34",
-    8: "8.8.8.8"
+    8: "8.8.8.8",
+    9: "lerolerolero"
 }
-cache = 0
+
+cache = [
+    {'ip': '8.8.8.8',
+     'cidade': 'Mountain View',
+     'regiao': 'California',
+     'pais': 'US',
+     'org': 'AS15169 Google LLC',
+     'hostname': 'dns.google'}
+]
 
 def areaDev():
     contador = 0
@@ -166,9 +197,11 @@ def areaDev():
 
             if _eh_ip_privado(ip):
                 print(f"O Ip {ip} é privado.")
+                pass
             else:
                 print(f"O Ip {ip} é público.")
-                consultar_ip(ip, cache)
+                cache.append(consultar_ip(ip, cache))
+            print(cache)
 
         except IPInvalidoError as e:
             print(e)
@@ -176,11 +209,4 @@ def areaDev():
             contador += 1
             continue
 
-    # contador = 0
-
-    # while contador < len(ip_dict):
-
-    #     ip = ip_dict[contador]
-
-    #     contador += 1
 areaDev()
