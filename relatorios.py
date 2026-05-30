@@ -20,14 +20,15 @@ def exibir_menu():
     print("║  0. Sair                                 ║")
     print("╚══════════════════════════════════════════╝")
 
-    while True:
-        try:
-            opcao = int(input("\nEscolha uma opção: "))
-            if 0 <= opcao <= 9:
-                return opcao
-            print("Opção inválida. Digite um número entre 0 e 9.")
-        except ValueError:
-            print("Opção inválida. Digite um número entre 0 e 9.")
+    try:
+        opcao = int(input("\nEscolha uma opção: "))
+        if 0 <= opcao <= 9:
+            return opcao
+        print("Opção inválida. Digite um número entre 0 e 9.")
+        return -1
+    except ValueError:
+        print("Opção inválida. Digite um número entre 0 e 9.")
+        return -1
 
 
 def resumo_geral(eventos, alertas):
