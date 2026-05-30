@@ -23,6 +23,7 @@ import requests
 import json
 import ipaddress
 from pathlib import Path
+import time
 
 def _eh_ip_privado(ip: ipaddress.IPv4Address | ipaddress.IPv6Address):
     primeiro_unpacked_ip = ip.packed[0]
@@ -89,38 +90,44 @@ def consultar_ip(ip, cache):
         - Use dados.get("city", "Desconhecido") para valores opcionais
         - cache[ip] = resultado  (salva no cache)
     """
+
+    ip_str = str(ip)
+
+    for entrada in cache:
+        if entrada.get("ip") == ip_str:
+            return 
+
     novos_dados = {}
-#if ip in chache["ip"]:
-    #Pula consulta API
-#else:
     try:
-        resposta = requests.get(f"https://ipinfo.io/{ip}/json", timeout=5)
-    except ConnectionError as e:
-        print(f"ERRO: {e}")
-    except TimeoutError as e:
-        print(f"ERRO: {e}")
-    except requests.exceptions.JSONDecodeError as e:
-        print(f"ERRO: {e}")
+        resposta = requests.get(f"https://ipinfo.io/{ip_str}/json", timeout=5)
+    except requests.exceptions.ConnectionError as e:
+        print(f"ERRO de conexao: {e}")
+        return novos_dados
+    except requests.exceptions.Timeout as e:
+        print(f"ERRO de timeout: {e}")
+        return novos_dados
+
     if resposta.status_code == 200:
-        print(f"{ip} encontrado na API")
-        dados = resposta.json()
+        try:
+            dados = resposta.json()
+            print(dados)
+            time.sleep(3)
+        except requests.exceptions.JSONDecodeError as e:
+            print(f"ERRO ao decodificar JSON: {e}")
+            return novos_dados
 
-        novo_ip = dados["ip"]
-        nova_cidade = dados["city"]
-        nova_regiao = dados["region"]
-        novo_pais = dados["country"]
-        nova_org = dados["org"]
-        novo_hostname = dados["hostname"]
-
-        novos_dados["ip"] = novo_ip
-        novos_dados["cidade"] = nova_cidade
-        novos_dados["regiao"] = nova_regiao
-        novos_dados["pais"] = novo_pais
-        novos_dados["org"] = nova_org
-        novos_dados["hostname"] = novo_hostname
+        novos_dados = {
+            "ip":       dados.get("ip"),
+            "cidade":   dados.get("city"),
+            "regiao":   dados.get("region"),
+            "pais":     dados.get("country"),
+            "org":      dados.get("org"),
+            "hostname": dados.get("hostname")
+        }
+        print(f"{ip_str} consultado na API")
+        return novos_dados
     else:
-        print(f"Resposta {resposta.status_code}")
-
+        print(f"Resposta HTTP {resposta.status_code} para {ip_str}")
     return novos_dados
 
 
@@ -192,39 +199,43 @@ ip_dict = {
 #     ]
 # }
 
-caminho_config = "D:\\01-Cursos\\03-FIAP\\01-Graduacao\\01-Ciber_seguranca\\01-Primeiro_ano\\01-Primeiro_semestre\\01-Coding_for_Security\\GS_Semestre_1\\vanguard-secura-siem\\config\\cache.json"
+caminho_config = Path("cache.json").parent / "config" / "cache.json"
 
 def _carregar_cache(caminho_config):
-    with open(caminho_config, "r") as f:
-        cache_json = json.load(f)
+    try:
+        with open(caminho_config, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
 
-    cache = cache_json.get("cache", [])
-    return cache
+def _salvar_cache(cache, caminho_config):
+      Path(caminho_config).parent.mkdir(parents=True, exist_ok=True)
+      with open(caminho_config, "w", encoding="utf-8") as f:
+          json.dump(cache, f, indent=2, ensure_ascii=False)
 
-cache = _carregar_cache(caminho_config)
+
 
 def areaDev():
-    contador = 0
-    while contador < len(ip_dict):
-        ip = ip_dict[contador]
-
-        try:
-            ip = eh_ip_valido(ip)
-            print(f"O Ip {ip} é válido.")
-
-            if _eh_ip_privado(ip):
+      cache = _carregar_cache(caminho_config)
+      contador = 0
+      while contador < len(ip_dict):
+          ip = ip_dict[contador]
+          try:
+              ip = eh_ip_valido(ip)
+              print(f"O Ip {ip} é válido.")
+              if _eh_ip_privado(ip):
                 print(f"O Ip {ip} é privado.")
-            else:
-                print(f"O Ip {ip} é público.")
-                cache.append(consultar_ip(ip, cache))
-            print(cache)
 
-        except IPInvalidoError as e:
-            print(e)
-        finally:
-            contador += 1
-            continue
-    with open(caminho_config, "a") as f:
-        json.dump(cache, f, ensure_ascii=False)
+              else:
+                  print(f"O Ip {ip} é público.")
+                  resultado = consultar_ip(ip, cache)
 
+                  if resultado:
+                    cache.append(resultado)
+            #   print(cache)
+          except IPInvalidoError as e:
+              print(e)
+          finally:
+              contador += 1
+              _salvar_cache(cache, caminho_config)
 areaDev()
