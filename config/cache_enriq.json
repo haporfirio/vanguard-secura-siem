@@ -1,0 +1,38 @@
+[
+  {
+    "ip": "185.220.101.1",
+    "privado": false,
+    "cidade": "Frankfurt",
+    "regiao": "Hesse",
+    "pais": "DE",
+    "org": "AS208294 Fastethernet",
+    "hostname": "tor-exit.r2"
+  },
+  {
+    "ip": "8.8.8.8",
+    "privado": false,
+    "cidade": "Mountain View",
+    "regiao": "California",
+    "pais": "US",
+    "org": "AS15169 Google LLC",
+    "hostname": "Desconhecido"
+  },
+  {
+    "ip": "192.168.1.10",
+    "privado": true,
+    "cidade": "Rede Interna",
+    "regiao": "Rede Interna",
+    "pais": "Rede Interna",
+    "org": "Rede Interna",
+    "hostname": "Rede Interna"
+  },
+  {
+    "ip": "1.2.3.4",
+    "privado": false,
+    "cidade": "Teste",
+    "regiao": "Teste",
+    "pais": "BR",
+    "org": "Teste",
+    "hostname": "Desconhecido"
+  }
+]
